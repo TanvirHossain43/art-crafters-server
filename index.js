@@ -1,6 +1,6 @@
 const express = require('express')
 const cors = require('cors')
-const { MongoClient, ServerApiVersion,ObjectId } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config();
 const app = express()
 const port = process.env.PORT || 5000
@@ -33,6 +33,7 @@ async function run() {
 
 
         const classesCollection = client.db('artCrafters').collection('classes')
+        const instructorCollection = client.db('artCrafters').collection('instructors')
 
         // ----Data Read operation----//
         app.get('/classes', async (req, res) => {
@@ -50,23 +51,31 @@ async function run() {
                 const result = await classesCollection.find().sort('-students').limit(6).toArray()
                 res.send(result)
             }
-         catch (error) {
-            res.status(500).send({ error: 'Failed to fetch tasks' });
-        }
+            catch (error) {
+                res.status(500).send({ error: 'Failed to fetch tasks' });
+            }
 
-    })
+        })
 
     
 
+        // get the all instructors
+        app.get('/instructors', async (req, res) => {
+            try {
+                const result = await instructorCollection.find().toArray();
+                res.send(result);
+            } catch (error) {
+                res.status(500).send({ error: 'Failed to fetch tasks' });
+            }
+        });
 
 
-
-    await client.db("admin").command({ ping: 1 });
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
-} finally {
-    // Ensures that the client will close when you finish/error
-    // await client.close();
-}
+        await client.db("admin").command({ ping: 1 });
+        console.log("Pinged your deployment. You successfully connected to MongoDB!");
+    } finally {
+        // Ensures that the client will close when you finish/error
+        // await client.close();
+    }
 }
 run().catch(console.dir);
 
