@@ -57,7 +57,28 @@ async function run() {
 
         })
 
-    
+        // to get classes by specific id
+
+        app.get('/classes/:id', async (req, res) => {
+
+            try {
+                const id = req.params.id;
+                if (!ObjectId.isValid(id)) {
+                    return res.status(400).send({ error: 'Invalid task ID' });
+                }
+
+                const query = { _id: new ObjectId(id) };
+                const result = await classesCollection.findOne(query);
+                if (!result) {
+                    return res.status(404).send({ error: 'Task not found' });
+                }
+
+                res.send(result);
+            }
+            catch (error) {
+                res.status(500).send({ error: 'Failed to fetch task' });
+            }
+        });
 
         // get the all instructors
         app.get('/instructors', async (req, res) => {
