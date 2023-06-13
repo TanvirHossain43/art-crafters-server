@@ -34,6 +34,16 @@ async function run() {
 
         const classesCollection = client.db('artCrafters').collection('classes')
 
+        // ----Data Read operation----//
+        app.get('/classes', async (req, res) => {
+            try {
+                const result = await classesCollection.find().toArray();
+                res.send(result);
+            } catch (error) {
+                res.status(500).send({ error: 'Failed to fetch tasks' });
+            }
+        });
+
 
 
 
