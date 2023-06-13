@@ -90,6 +90,18 @@ async function run() {
             }
         });
 
+        // popular instructors
+        app.get('/instructors/popular', async (req, res) => {
+            try {
+                const result = await instructorCollection.find().limit(6).toArray()
+                res.send(result)
+            }
+            catch (error) {
+                res.status(500).send({ error: 'Failed to fetch tasks' });
+            }
+
+        })
+
 
         await client.db("admin").command({ ping: 1 });
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
