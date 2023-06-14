@@ -102,6 +102,43 @@ async function run() {
 
         })
 
+    //  update function for reducing classes after clicking
+
+    app.patch('/classes/:id', async (req, res) => {
+        try {
+          const id = req.params.id;
+          if (!ObjectId.isValid(id)) {
+            return res.status(400).send({ error: 'Invalid class ID' });
+          }
+      
+          const { incrementStudents, decrementSeats } = req.body;
+      
+          const query = { _id: new ObjectId(id) };
+          const update = {};
+      
+          if (incrementStudents) {
+            update.$inc = { students: 1 };
+          }
+          if (decrementSeats) {
+            update.$inc = { availableSeats: -1 };
+          }
+      
+          const result = await classesCollection.updateOne(query, update);
+          if (result.modifiedCount > 0) {
+            res.send({ modifiedCount: result.modifiedCount });
+          } else {
+            res.send({ modifiedCount: 0 });
+          }
+        } catch (error) {
+          console.error('Error updating class:', error);
+          res.status(500).send({ error: 'Failed to update class' });
+        }
+      });
+      
+
+       
+
+
 
         await client.db("admin").command({ ping: 1 });
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
