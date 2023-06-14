@@ -111,29 +111,28 @@ async function run() {
             return res.status(400).send({ error: 'Invalid class ID' });
           }
       
-          const { incrementStudents, decrementSeats } = req.body;
+          const { incrementStudents } = req.body;
       
           const query = { _id: new ObjectId(id) };
           const update = {};
       
           if (incrementStudents) {
-            update.$inc = { students: 1 };
-          }
-          if (decrementSeats) {
-            update.$inc = { availableSeats: -1 };
+            update.$inc = { students: 1, availableSeats: -1 };
           }
       
-          const result = await classesCollection.updateOne(query, update);
-          if (result.modifiedCount > 0) {
-            res.send({ modifiedCount: result.modifiedCount });
-          } else {
-            res.send({ modifiedCount: 0 });
+          const result = await classesCollection.findOneAndUpdate(query, update);
+      
+          if (!result.value) {
+            return res.status(404).send({ error: 'Class not found' });
           }
+      
+          res.send({ modifiedCount: 1 });
         } catch (error) {
           console.error('Error updating class:', error);
           res.status(500).send({ error: 'Failed to update class' });
         }
       });
+      
       
 
        
