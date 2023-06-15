@@ -34,6 +34,7 @@ async function run() {
 
         const classesCollection = client.db('artCrafters').collection('classes')
         const instructorCollection = client.db('artCrafters').collection('instructors')
+        const selectedclassCollection = client.db('artCrafters').collection('selectedClass')
 
         // ----Data Read operation----//
         app.get('/classes', async (req, res) => {
@@ -102,40 +103,63 @@ async function run() {
 
         })
 
-    //  update function for reducing classes after clicking
+        //  update function for reducing classes after clicking
 
-    app.patch('/classes/:id', async (req, res) => {
-        try {
-          const id = req.params.id;
-          if (!ObjectId.isValid(id)) {
-            return res.status(400).send({ error: 'Invalid class ID' });
-          }
-      
-          const { incrementStudents } = req.body;
-      
-          const query = { _id: new ObjectId(id) };
-          const update = {};
-      
-          if (incrementStudents) {
-            update.$inc = { students: 1, availableSeats: -1 };
-          }
-      
-          const result = await classesCollection.findOneAndUpdate(query, update);
-      
-          if (!result.value) {
-            return res.status(404).send({ error: 'Class not found' });
-          }
-      
-          res.send({ modifiedCount: 1 });
-        } catch (error) {
-          console.error('Error updating class:', error);
-          res.status(500).send({ error: 'Failed to update class' });
-        }
-      });
-      
-      
+        // app.patch('/classes/:id', async (req, res) => {
+        //     try {
+        //         const id = req.params.id;
+        //         if (!ObjectId.isValid(id)) {
+        //             return res.status(400).send({ error: 'Invalid class ID' });
+        //         }
 
-       
+        //         const { incrementStudents } = req.body;
+
+        //         const query = { _id: new ObjectId(id) };
+        //         const update = {};
+
+        //         if (incrementStudents) {
+        //             update.$inc = { students: 1, availableSeats: -1 };
+        //         }
+
+        //         const result = await classesCollection.findOneAndUpdate(query, update);
+
+        //         if (!result.value) {
+        //             return res.status(404).send({ error: 'Class not found' });
+        //         }
+
+        //         res.send({ modifiedCount: 1 });
+        //     } catch (error) {
+        //         console.error('Error updating class:', error);
+        //         res.status(500).send({ error: 'Failed to update class' });
+        //     }
+        // });
+        //   selected class collection
+        app.get('/selectedClass', async (req, res) => {
+            const email = req.query.email;
+
+            // if (!email) {
+            //     res.send([])
+            // }
+
+            const query = { email: email };
+            const result = await selectedclassCollection.find(query).toArray();
+            res.send(result)
+        })
+
+        app.post('/selectedClass', async (req, res) => {
+            try {
+                const item = req.body;
+                const result = await selectedclassCollection.insertOne(item);
+               
+                res.send(result);
+            } catch (error) {
+                console.error('Error inserting selected class:', error);
+                res.status(500).send({ error: 'Failed to insert selected class' });
+            }
+        });
+
+
+
 
 
 
