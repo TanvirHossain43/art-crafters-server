@@ -1,5 +1,6 @@
 const express = require('express')
 const cors = require('cors')
+const jwt = require('jsonwebtoken')
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config();
 const app = express()
@@ -38,6 +39,16 @@ async function run() {
         const usersCollection = client.db('artCrafters').collection('users')
 
 
+
+        app.post('/jwt', (req, res) => {
+            const user = req.body;
+            const token = jwt.sign(user, process.env.ACCESS_TOKEN, { expiresIn: '1h' })
+
+            console.log(token)
+            res.send({ token })
+
+        })
+
         // ----Data Read operation----//
         // users api
         app.get('/users', async (req, res) => {
@@ -59,7 +70,7 @@ async function run() {
 
         app.patch('/users/admin/:id', async (req, res) => {
             const id = req.params.id;
-            const filter = { _id:new ObjectId(id) };
+            const filter = { _id: new ObjectId(id) };
             const { role } = req.body;
 
             try {
