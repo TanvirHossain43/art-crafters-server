@@ -13,6 +13,26 @@ app.use(cors())
 app.use(express.json())
 
 
+const verifyJWT = (req, res, next) => {
+    const authorization = req.headers.authorization;
+    if (!authorization) {
+        return res.status(401).send({ error: true, message: 'unauthorized access' })
+    }
+    // bearer token
+    const token = authorization.split(' ')[1];
+
+
+    jwt.verify(token, process.env.ACCESS_TOKEN, (err, decoded) => {
+        if (err) {
+            return res.status(401).send({ error: true, message: 'unauthorized access' })
+        }
+
+        req.decoded = decoded;
+        next();
+    })
+}
+
+
 
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.5lehpdk.mongodb.net/?retryWrites=true&w=majority`;
@@ -184,13 +204,16 @@ async function run() {
         //     }
         // });
         //   selected class collection
-        app.get('/selectedClass', async (req, res) => {
+        app.get('/selectedClass', verifyJWT, async (req, res) => {
             const email = req.query.email;
 
-            // if (!email) {
-            //     res.send([])
-            // }
-
+            if (!email) {
+                res.send([])
+            }
+            const decodedEmail = req.decoded.email;
+            if (email !== decodedEmail) {
+                return res.status(401).send({ error: true, message: 'forbiden access' })
+            }
             const query = { email: email };
             const result = await selectedclassCollection.find(query).toArray();
             res.send(result)
