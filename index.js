@@ -35,8 +35,16 @@ async function run() {
         const classesCollection = client.db('artCrafters').collection('classes')
         const instructorCollection = client.db('artCrafters').collection('instructors')
         const selectedclassCollection = client.db('artCrafters').collection('selectedClass')
+        const usersCollection = client.db('artCrafters').collection('users')
+
 
         // ----Data Read operation----//
+        // users api
+        app.get('/users', async (req, res) => {
+            const result = await usersCollection.find().toArray()
+            res.send(result)
+        })
+
         app.get('/classes', async (req, res) => {
             try {
                 const result = await classesCollection.find().toArray();
@@ -150,13 +158,21 @@ async function run() {
             try {
                 const item = req.body;
                 const result = await selectedclassCollection.insertOne(item);
-               
+
                 res.send(result);
             } catch (error) {
                 console.error('Error inserting selected class:', error);
                 res.status(500).send({ error: 'Failed to insert selected class' });
             }
         });
+        // delete method 
+
+        app.delete('/selectedClass/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) }
+            const result = await selectedclassCollection.deleteOne(query)
+            res.send(result)
+        })
 
 
 
