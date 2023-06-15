@@ -57,6 +57,25 @@ async function run() {
             res.send(result)
         })
 
+        app.patch('/users/admin/:id', async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id:new ObjectId(id) };
+            const { role } = req.body;
+
+            try {
+                const result = await usersCollection.updateOne(filter, { $set: { role } });
+
+                if (result.modifiedCount === 1) {
+                    res.send({ message: 'Role updated successfully' });
+                } else {
+                    res.status(404).send({ message: 'User not found' });
+                }
+            } catch (error) {
+                res.status(500).send({ message: 'Error updating role' });
+            }
+        });
+
+
         app.get('/classes', async (req, res) => {
             try {
                 const result = await classesCollection.find().toArray();
