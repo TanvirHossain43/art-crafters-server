@@ -90,9 +90,9 @@ async function run() {
 
         app.get('/users/admin/:email', verifyJWT, async (req, res) => {
             const email = req.params.email;
-            
+
             if (req.decoded.email !== email) {
-                res.send({ admin: false })
+                return res.send({ admin: false })
             }
 
             const query = { email: email }
@@ -118,6 +118,20 @@ async function run() {
                 res.status(500).send({ message: 'Error updating role' });
             }
         });
+
+        // instructors api
+        app.get('/users/instructor/:email', verifyJWT, async (req, res) => {
+            const email = req.params.email;
+
+            if (req.decoded.email !== email) {
+                return res.send({ instructor: false })
+            }
+
+            const query = { email: email }
+            const user = await usersCollection.findOne(query)
+            const result = { instructor: user?.role === 'instructor' }
+            res.send(result)
+        })
 
 
         app.get('/classes', async (req, res) => {
@@ -161,6 +175,25 @@ async function run() {
             }
             catch (error) {
                 res.status(500).send({ error: 'Failed to fetch task' });
+            }
+        });
+
+
+        // post method for classes by instructor
+        
+        app.post('/classes', async (req, res) => {
+            try {
+                const newClass = req.body;
+
+                // Check for required fields
+                if (!newClass.name || !newClass.image || !newClass.status || !newClass.instructor || !newClass.instructorEmail || !newClass.availableSeats || !newClass.price) {
+                    return res.status(400).send({ error: 'Missing required fields' });
+                }
+
+                const result = await classCollection.insertOne(newClass);
+                res.send(result);
+            } catch (error) {
+                res.status(500).send({ error: 'Failed to create class' });
             }
         });
 
