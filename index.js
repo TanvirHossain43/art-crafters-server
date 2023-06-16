@@ -1,6 +1,7 @@
 const express = require('express')
 const cors = require('cors')
 const jwt = require('jsonwebtoken')
+const stripe = require('stripe')(process.env.PAYMENT_SECRET_KEY)
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config();
 const app = express()
@@ -57,6 +58,7 @@ async function run() {
         const instructorCollection = client.db('artCrafters').collection('instructors')
         const selectedclassCollection = client.db('artCrafters').collection('selectedClass')
         const usersCollection = client.db('artCrafters').collection('users')
+        const paymentCollection = client.db('artCrafters').collection('payments')
 
 
 
@@ -136,12 +138,18 @@ async function run() {
 
         app.get('/classes', async (req, res) => {
             try {
-                const result = await classesCollection.find().toArray();
+                let query = {};
+                if (req.query?.instructorEmail) {
+                    query = { instructorEmail: req.query.instructorEmail };
+                }
+                const result = await classesCollection.find(query).toArray();
                 res.send(result);
             } catch (error) {
-                res.status(500).send({ error: 'Failed to fetch tasks' });
+                res.status(500).send({ error: 'Failed to fetch classes' });
             }
         });
+
+
 
         // popular classes
         app.get('/classes/popular', async (req, res) => {
@@ -179,23 +187,31 @@ async function run() {
         });
 
 
+
+
         // post method for classes by instructor
-        
+
         app.post('/classes', async (req, res) => {
             try {
                 const newClass = req.body;
 
                 // Check for required fields
-                if (!newClass.name || !newClass.image || !newClass.status || !newClass.instructor || !newClass.instructorEmail || !newClass.availableSeats || !newClass.price) {
+                if (!newClass.name || !newClass.image || !newClass.status || !newClass.instructor || !newClass.instructorEmail || !newClass.availableSeats || !newClass.price || !newClass.students) {
                     return res.status(400).send({ error: 'Missing required fields' });
                 }
 
-                const result = await classCollection.insertOne(newClass);
+                // Parse integer fields
+                newClass.availableSeats = parseInt(newClass.availableSeats);
+                newClass.price = parseInt(newClass.price);
+                newClass.students = parseInt(newClass.students);
+
+                const result = await classesCollection.insertOne(newClass);
                 res.send(result);
             } catch (error) {
                 res.status(500).send({ error: 'Failed to create class' });
             }
         });
+
 
         // get the all instructors
         app.get('/instructors', async (req, res) => {
@@ -249,21 +265,41 @@ async function run() {
         //         res.status(500).send({ error: 'Failed to update class' });
         //     }
         // });
-        //   selected class collection
-        app.get('/selectedClass', verifyJWT, async (req, res) => {
+
+
+        // Get selected classes for a user
+        app.get('/users/selectedClass', verifyJWT, async (req, res) => {
             const email = req.query.email;
 
             if (!email) {
-                res.send([])
+                res.send([]);
             }
+
             const decodedEmail = req.decoded.email;
+
             if (email !== decodedEmail) {
-                return res.status(401).send({ error: true, message: 'forbiden access' })
+                return res.status(401).send({ error: true, message: 'Forbidden access' });
             }
+
             const query = { email: email };
             const result = await selectedclassCollection.find(query).toArray();
-            res.send(result)
-        })
+            res.send(result);
+        });
+
+        // Add selected class for a user
+        app.post('/users/selectedClass', async (req, res) => {
+            try {
+                const item = req.body;
+                const result = await selectedclassCollection.insertOne(item);
+                res.send(result);
+            } catch (error) {
+                console.error('Error inserting selected class:', error);
+                res.status(500).send({ error: 'Failed to insert selected class' });
+            }
+        });
+
+
+
 
         app.post('/selectedClass', async (req, res) => {
             try {
@@ -285,7 +321,34 @@ async function run() {
             res.send(result)
         })
 
+        // payment 
+        app.post('/create-payment-intent', verifyJWT, async (req, res) => {
+            const { price } = req.body
+            const amount = price * 100;
+            const paymentIntent = await stripe.paymentIntents.create({
+                amount: amount,
+                currency: 'usd',
+                payment_method_types: ['card']
+            }
+                , {
+                    apiKey: process.env.PAYMENT_SECRET_KEY
+                }
+            )
+            res.send({
+                clientSecret: paymentIntent.client_secret
+            })
+        })
 
+        // payment related api
+        app.post('/payments', verifyJWT, async (req, res) => {
+            const payment = req.body;
+            const insertedClass = await paymentCollection.insertOne(payment)
+
+            const query = { _id:new ObjectId(payment.classId) };
+
+            const deleteClass = await selectedclassCollection.deleteOne(query)
+            res.send({ insertedClass, deleteClass })
+        })
 
 
 
