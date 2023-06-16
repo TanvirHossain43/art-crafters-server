@@ -339,12 +339,64 @@ async function run() {
             })
         })
 
+
+        app.get('/payments/:email', verifyJWT, async (req, res) => {
+            try {
+                const email = req.params.email;
+
+                // Find the payments made by the student based on the email
+                const payments = await paymentCollection
+                    .find({ email })
+                    .sort({ date: -1 })
+                    .toArray();
+
+                res.send({ payments });
+            } catch (error) {
+                console.error('Error retrieving payment history:', error);
+                res.status(500).send({ error: 'Failed to retrieve payment history' });
+            }
+        });
+
+
         // payment related api
         app.post('/payments', verifyJWT, async (req, res) => {
             const payment = req.body;
             const insertedClass = await paymentCollection.insertOne(payment)
 
-            const query = { _id:new ObjectId(payment.classId) };
+            if (insertedClass) {
+
+                app.patch('/classes/:id', async (req, res) => {
+                    try {
+                        const id = req.params.id;
+                        if (!ObjectId.isValid(id)) {
+                            return res.status(400).send({ error: 'Invalid class ID' });
+                        }
+
+                        const { incrementStudents } = req.body;
+
+                        const query = { _id: new ObjectId(id) };
+                        const update = {};
+
+                        if (incrementStudents) {
+                            update.$inc = { students: 1, availableSeats: -1 };
+                        }
+
+                        const result = await classesCollection.findOneAndUpdate(query, update);
+
+                        if (!result.value) {
+                            return res.status(404).send({ error: 'Class not found' });
+                        }
+
+                        res.send({ modifiedCount: 1 });
+                    } catch (error) {
+                        console.error('Error updating class:', error);
+                        res.status(500).send({ error: 'Failed to update class' });
+                    }
+                });
+
+            }
+
+            const query = { _id: new ObjectId(payment.classId) };
 
             const deleteClass = await selectedclassCollection.deleteOne(query)
             res.send({ insertedClass, deleteClass })
