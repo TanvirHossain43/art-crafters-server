@@ -227,7 +227,7 @@ async function run() {
             }
         });
 
-         //  update function for reducing classes after clicking
+        //  update function for reducing classes after clicking
 
 
         app.patch('/classes/:id', async (req, res) => {
@@ -318,7 +318,7 @@ async function run() {
             try {
                 const id = req.params.id;
 
-                const selectedClass = await selectedclassCollection.findOne({ _id:new ObjectId(id) });
+                const selectedClass = await selectedclassCollection.findOne({ _id: new ObjectId(id) });
 
                 if (!selectedClass) {
                     return res.status(404).send({ error: 'Selected class not found' });
@@ -372,6 +372,22 @@ async function run() {
         })
 
 
+        app.get('/payments', verifyJWT, async (req, res) => {
+            try {
+                const { email } = req.query;
+
+                // Find the payments made by the student based on the email
+                const payments = await paymentCollection
+                    .find({ email })
+                    .sort({ date: -1 })
+                    .toArray();
+
+                res.send({ payments });
+            } catch (error) {
+                console.error('Error retrieving payment history:', error);
+                res.status(500).send({ error: 'Failed to retrieve payment history' });
+            }
+        });
         app.get('/payments/:email', verifyJWT, async (req, res) => {
             try {
                 const email = req.params.email;
@@ -388,6 +404,7 @@ async function run() {
                 res.status(500).send({ error: 'Failed to retrieve payment history' });
             }
         });
+
 
 
         // payment related api
