@@ -148,6 +148,32 @@ async function run() {
                 res.status(500).send({ error: 'Failed to fetch classes' });
             }
         });
+        //patch function to get add status by admin
+        app.patch('/classes/:id', async (req, res) => {
+            try {
+                const { id } = req.params; // Retrieve the ID from req.params as a string
+                const { status } = req.body; // Retrieve the status from req.body
+
+                // Update the class with the provided ID
+                const result = await classesCollection.updateOne(
+                    { _id: new ObjectId(id) },
+                    {
+                        $set: {
+                            status,
+                        },
+                    }
+                );
+
+                if (result.modifiedCount === 1) {
+                    res.send({ message: 'Class updated successfully' });
+                } else {
+                    res.status(404).send({ error: 'Class not found' });
+                }
+            } catch (error) {
+                res.status(500).send({ error: 'Failed to update class' });
+            }
+        });
+
 
 
 
@@ -194,21 +220,40 @@ async function run() {
         app.post('/classes', async (req, res) => {
             try {
                 const newClass = req.body;
-
-                // Check for required fields
-                if (!newClass.name || !newClass.image || !newClass.status || !newClass.instructor || !newClass.instructorEmail || !newClass.availableSeats || !newClass.price || !newClass.students) {
-                    return res.status(400).send({ error: 'Missing required fields' });
-                }
-
-                // Parse integer fields
-                newClass.availableSeats = parseInt(newClass.availableSeats);
-                newClass.price = parseInt(newClass.price);
-                newClass.students = parseInt(newClass.students);
-
                 const result = await classesCollection.insertOne(newClass);
                 res.send(result);
             } catch (error) {
                 res.status(500).send({ error: 'Failed to create class' });
+            }
+        });
+
+         //  update function for reducing classes after clicking
+
+
+        app.patch('/classes/:id', async (req, res) => {
+            try {
+                const id = req.params.id;
+                if (!ObjectId.isValid(id)) {
+                    return res.status(400).send({ error: 'Invalid class ID' });
+                }
+                const { incrementStudents } = req.body;
+                const query = { _id: new ObjectId(id) };
+                const update = {};
+
+
+                if (incrementStudents) {
+                    update.$inc = { students: 1, availableSeats: -1 };
+                }
+                const result = await classesCollection.findOneAndUpdate(query, update);
+
+
+                if (!result.value) {
+                    return res.status(404).send({ error: 'Class not found' });
+                }
+                res.send({ modifiedCount: 1 });
+            } catch (error) {
+                console.error('Error updating class:', error);
+                res.status(500).send({ error: 'Failed to update class' });
             }
         });
 
@@ -235,36 +280,6 @@ async function run() {
 
         })
 
-        //  update function for reducing classes after clicking
-
-        // app.patch('/classes/:id', async (req, res) => {
-        //     try {
-        //         const id = req.params.id;
-        //         if (!ObjectId.isValid(id)) {
-        //             return res.status(400).send({ error: 'Invalid class ID' });
-        //         }
-
-        //         const { incrementStudents } = req.body;
-
-        //         const query = { _id: new ObjectId(id) };
-        //         const update = {};
-
-        //         if (incrementStudents) {
-        //             update.$inc = { students: 1, availableSeats: -1 };
-        //         }
-
-        //         const result = await classesCollection.findOneAndUpdate(query, update);
-
-        //         if (!result.value) {
-        //             return res.status(404).send({ error: 'Class not found' });
-        //         }
-
-        //         res.send({ modifiedCount: 1 });
-        //     } catch (error) {
-        //         console.error('Error updating class:', error);
-        //         res.status(500).send({ error: 'Failed to update class' });
-        //     }
-        // });
 
 
         // Get selected classes for a user
@@ -298,6 +313,23 @@ async function run() {
             }
         });
 
+        // get api for selected class
+        app.get('/selectedClass/:id', async (req, res) => {
+            try {
+                const id = req.params.id;
+
+                const selectedClass = await selectedclassCollection.findOne({ _id:new ObjectId(id) });
+
+                if (!selectedClass) {
+                    return res.status(404).send({ error: 'Selected class not found' });
+                }
+
+                res.send(selectedClass);
+            } catch (error) {
+                console.error('Error retrieving selected class:', error);
+                res.status(500).send({ error: 'Failed to retrieve selected class' });
+            }
+        });
 
 
 
@@ -362,39 +394,6 @@ async function run() {
         app.post('/payments', verifyJWT, async (req, res) => {
             const payment = req.body;
             const insertedClass = await paymentCollection.insertOne(payment)
-
-            if (insertedClass) {
-
-                app.patch('/classes/:id', async (req, res) => {
-                    try {
-                        const id = req.params.id;
-                        if (!ObjectId.isValid(id)) {
-                            return res.status(400).send({ error: 'Invalid class ID' });
-                        }
-
-                        const { incrementStudents } = req.body;
-
-                        const query = { _id: new ObjectId(id) };
-                        const update = {};
-
-                        if (incrementStudents) {
-                            update.$inc = { students: 1, availableSeats: -1 };
-                        }
-
-                        const result = await classesCollection.findOneAndUpdate(query, update);
-
-                        if (!result.value) {
-                            return res.status(404).send({ error: 'Class not found' });
-                        }
-
-                        res.send({ modifiedCount: 1 });
-                    } catch (error) {
-                        console.error('Error updating class:', error);
-                        res.status(500).send({ error: 'Failed to update class' });
-                    }
-                });
-
-            }
 
             const query = { _id: new ObjectId(payment.classId) };
 
